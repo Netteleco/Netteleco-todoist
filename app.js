@@ -144,6 +144,11 @@ function renderTasks() {
       ? `<span class="badge deadline ${deadlineClass}">${deadlineClass === "overdue" ? "Vencida" : deadlineClass === "today" ? "Hoy" : formatDeadline(task.deadline)}</span>`
       : "";
 
+    const assignee = typeof getUserById === "function" ? getUserById(task.assigneeId ?? null) : undefined;
+    const assigneeBadge = assignee
+      ? `<span class="badge assignee"><span class="user-avatar tiny" style="background:${assignee.color}">${escapeHtml(userInitials(assignee.name))}</span>${escapeHtml(assignee.name)}</span>`
+      : "";
+
     div.innerHTML = `
       <input type="checkbox" ${task.done ? "checked" : ""} />
       <div class="task-main">
@@ -152,6 +157,7 @@ function renderTasks() {
           ${project ? `<span class="badge project" style="background:${project.color}">${escapeHtml(project.name)}</span>` : ""}
           ${deadlineBadge}
           <span class="badge priority-${task.priority}">${task.priority === "high" ? "Alta" : task.priority === "medium" ? "Media" : "Baja"}</span>
+          ${assigneeBadge}
         </div>
       </div>
       <button class="task-delete" title="Eliminar">&times;</button>
@@ -184,6 +190,7 @@ function render() {
   renderProjectSelect();
   renderViewTitle();
   renderTasks();
+  if (typeof renderAssigneeSelect === "function") renderAssigneeSelect();
 }
 
 document.querySelectorAll(".view-btn").forEach((btn) => {
@@ -205,6 +212,7 @@ document.getElementById("taskForm").addEventListener("submit", (e) => {
   const projectId = document.getElementById("taskProject").value;
   const deadline = document.getElementById("taskDeadline").value || null;
   const priority = document.getElementById("taskPriority").value;
+  const assigneeId = document.getElementById("taskAssignee").value || null;
 
   state.tasks.push({
     id: uid(),
@@ -212,6 +220,7 @@ document.getElementById("taskForm").addEventListener("submit", (e) => {
     projectId,
     deadline,
     priority,
+    assigneeId,
     done: false,
     createdAt: Date.now(),
   });
