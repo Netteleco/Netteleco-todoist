@@ -11,6 +11,11 @@
     <aside class="sidebar">
       <h1 class="brand">✓ Todo</h1>
 
+      <button type="button" class="user-switcher" id="userSwitcher" title="Cambiar de usuario">
+        <span class="user-avatar" id="userSwitcherAvatar"></span>
+        <span class="user-switcher-name" id="userSwitcherName"></span>
+      </button>
+
       <nav class="views">
         <button class="view-btn active" data-view="all">
           <span class="dot" style="background:#6366f1"></span> Todas las tareas
@@ -53,6 +58,7 @@
           <option value="medium" selected>Media</option>
           <option value="high">Alta</option>
         </select>
+        <select id="taskAssignee"></select>
         <button type="submit" class="primary-btn">Añadir</button>
       </form>
 
@@ -73,6 +79,22 @@
     </form>
   </dialog>
 
+  <dialog id="userDialog">
+    <div id="userDialogContent">
+      <h3>Gestionar usuarios</h3>
+      <ul id="userList" class="user-list"></ul>
+      <form id="userForm">
+        <input id="userName" type="text" placeholder="Nombre" required maxlength="40" />
+        <div class="color-picker" id="userColorPicker"></div>
+        <div class="dialog-actions">
+          <button type="button" id="closeUserDialogBtn" class="ghost-btn">Cerrar</button>
+          <button type="submit" class="primary-btn">Añadir usuario</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <script src="users.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

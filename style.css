@@ -41,6 +41,47 @@ body {
   margin: 0 6px;
 }
 
+.user-switcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+  width: 100%;
+}
+
+.user-switcher:hover { background: #f1f2f6; }
+
+.user-switcher-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.user-avatar.small { width: 22px; height: 22px; font-size: 10px; }
+.user-avatar.tiny { width: 16px; height: 16px; font-size: 9px; }
+
 .views {
   display: flex;
   flex-direction: column;
@@ -269,6 +310,7 @@ body {
 .badge.priority-high { background: #fee2e2; color: var(--danger); }
 .badge.priority-medium { background: #fef3c7; color: #b45309; }
 .badge.priority-low { background: #e0f2fe; color: #0369a1; }
+.badge.assignee { background: #f1f2f6; color: var(--text-dim); padding-left: 4px; }
 
 .task-delete {
   border: none;
@@ -331,6 +373,81 @@ dialog::backdrop { background: rgba(0,0,0,0.3); }
   justify-content: flex-end;
   gap: 8px;
 }
+
+#userDialogContent {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 320px;
+}
+
+#userDialogContent h3 { margin: 0; }
+
+#userForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#userName { width: 100%; }
+
+.user-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.user-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+}
+
+.user-list-item.active { background: #eef0ff; }
+
+.user-list-item .label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.user-list-item .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.user-list-item .active-badge {
+  background: var(--accent);
+  color: white;
+}
+
+.user-list-item .set-active-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.user-list-item .delete-btn {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.user-list-item .delete-btn:hover { color: var(--danger); }
+.user-list-item .delete-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 @media (max-width: 720px) {
   .app { flex-direction: column; }
