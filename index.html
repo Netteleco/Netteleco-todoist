@@ -94,7 +94,54 @@
     </div>
   </dialog>
 
+  <dialog id="taskDetailDialog">
+    <div id="taskDetailContent" class="task-detail-content">
+      <div class="dialog-actions task-detail-close-row">
+        <button type="button" id="closeTaskDetailBtn" class="ghost-btn">Cerrar</button>
+      </div>
+
+      <div class="task-detail-fields">
+        <input id="detailTitle" type="text" maxlength="200" />
+        <div class="task-detail-row">
+          <select id="detailProject"></select>
+          <input id="detailDeadline" type="date" />
+          <select id="detailPriority">
+            <option value="low">Baja</option>
+            <option value="medium">Media</option>
+            <option value="high">Alta</option>
+          </select>
+          <select id="detailAssignee"></select>
+        </div>
+      </div>
+
+      <section class="task-detail-section">
+        <h4>Subtareas <span id="subtaskProgress" class="subtask-progress"></span></h4>
+        <ul id="subtaskList" class="subtask-list"></ul>
+        <div class="task-detail-add-row">
+          <input id="subtaskInput" type="text" placeholder="Nueva subtarea..." maxlength="200" />
+          <button type="button" id="addSubtaskBtn" class="ghost-btn">Añadir</button>
+        </div>
+      </section>
+
+      <section class="task-detail-section">
+        <h4>Comentarios</h4>
+        <ul id="commentList" class="comment-list"></ul>
+        <div class="task-detail-add-row">
+          <textarea id="commentInput" placeholder="Escribe un comentario..." maxlength="2000"></textarea>
+          <button type="button" id="addCommentBtn" class="ghost-btn">Comentar</button>
+        </div>
+      </section>
+
+      <section class="task-detail-section">
+        <h4>Adjuntos</h4>
+        <ul id="attachmentList" class="attachment-list"></ul>
+        <input id="attachmentInput" type="file" multiple accept="image/*,application/pdf" />
+      </section>
+    </div>
+  </dialog>
+
   <script src="users.js"></script>
+  <script src="attachments.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

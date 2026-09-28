@@ -449,6 +449,243 @@ dialog::backdrop { background: rgba(0,0,0,0.3); }
 .user-list-item .delete-btn:hover { color: var(--danger); }
 .user-list-item .delete-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
+.badge.subtask-count { background: #f1f2f6; color: var(--text-dim); }
+.badge.comment-count { background: #f1f2f6; color: var(--text-dim); }
+.badge.attachment-count { background: #f1f2f6; color: var(--text-dim); }
+
+.task-main { cursor: pointer; }
+
+/* Task detail dialog */
+
+#taskDetailDialog {
+  width: min(640px, 92vw);
+  max-height: 88vh;
+}
+
+.task-detail-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 88vh;
+  overflow-y: auto;
+  width: min(640px, 92vw);
+}
+
+.task-detail-close-row {
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.task-detail-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#detailTitle {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.task-detail-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.task-detail-row select,
+.task-detail-row input {
+  flex: 1 1 130px;
+}
+
+.task-detail-section {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-detail-section h4 {
+  margin: 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subtask-progress {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+.task-detail-add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.task-detail-add-row input[type="text"] {
+  flex: 1;
+}
+
+.task-detail-add-row textarea {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 38px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.subtask-list,
+.comment-list,
+.attachment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.subtask-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.subtask-item.done .subtask-title { text-decoration: line-through; color: var(--text-dim); }
+
+.subtask-title { flex: 1; word-break: break-word; }
+
+.subtask-item .delete-btn,
+.comment-item .delete-btn,
+.attachment-item .delete-btn {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.subtask-item .delete-btn:hover,
+.attachment-item .delete-btn:hover { color: var(--danger); }
+
+.comment-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.comment-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comment-meta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.comment-author {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.comment-date {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.comment-text {
+  font-size: 14px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+.attachment-preview {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f2f6;
+  font-size: 20px;
+}
+
+.attachment-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attachment-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.attachment-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-size {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.attachment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.attachment-actions .ghost-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+#attachmentInput {
+  font-size: 13px;
+}
+
 @media (max-width: 720px) {
   .app { flex-direction: column; }
   .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
