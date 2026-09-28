@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Todo · Proyectos</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1 class="brand">✓ Todo</h1>
+
+      <nav class="views">
+        <button class="view-btn active" data-view="all">
+          <span class="dot" style="background:#6366f1"></span> Todas las tareas
+        </button>
+        <button class="view-btn" data-view="today">
+          <span class="dot" style="background:#f59e0b"></span> Hoy
+        </button>
+        <button class="view-btn" data-view="overdue">
+          <span class="dot" style="background:#ef4444"></span> Vencidas
+        </button>
+      </nav>
+
+      <div class="sidebar-section">
+        <div class="sidebar-header">
+          <span>Proyectos</span>
+          <button id="addProjectBtn" class="icon-btn" title="Nuevo proyecto">+</button>
+        </div>
+        <ul id="projectList" class="project-list"></ul>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="content-header">
+        <h2 id="viewTitle">Todas las tareas</h2>
+        <div class="header-actions">
+          <select id="sortSelect">
+            <option value="deadline">Ordenar por fecha límite</option>
+            <option value="priority">Ordenar por prioridad</option>
+            <option value="created">Ordenar por creación</option>
+          </select>
+        </div>
+      </header>
+
+      <form id="taskForm" class="task-form">
+        <input id="taskTitle" type="text" placeholder="Nueva tarea..." required maxlength="200" />
+        <select id="taskProject"></select>
+        <input id="taskDeadline" type="date" />
+        <select id="taskPriority">
+          <option value="low">Baja</option>
+          <option value="medium" selected>Media</option>
+          <option value="high">Alta</option>
+        </select>
+        <button type="submit" class="primary-btn">Añadir</button>
+      </form>
+
+      <div id="taskList" class="task-list"></div>
+      <p id="emptyState" class="empty-state" hidden>No hay tareas por aquí. ¡Añade una!</p>
+    </main>
+  </div>
+
+  <dialog id="projectDialog">
+    <form id="projectForm" method="dialog">
+      <h3>Nuevo proyecto</h3>
+      <input id="projectName" type="text" placeholder="Nombre del proyecto" required maxlength="60" />
+      <div class="color-picker" id="colorPicker"></div>
+      <div class="dialog-actions">
+        <button type="button" id="cancelProjectBtn" class="ghost-btn">Cancelar</button>
+        <button type="submit" class="primary-btn">Crear</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
