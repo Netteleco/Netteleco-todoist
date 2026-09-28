@@ -4,7 +4,15 @@ const COLORS = ["#6366f1", "#ef4444", "#f59e0b", "#10b981", "#0ea5e9", "#a855f7"
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      (parsed.tasks || []).forEach((task) => {
+        if (!Array.isArray(task.subtasks)) task.subtasks = [];
+        if (!Array.isArray(task.comments)) task.comments = [];
+        if (!Array.isArray(task.attachments)) task.attachments = [];
+      });
+      return parsed;
+    }
   } catch (e) {}
   return {
     projects: [
@@ -97,7 +105,13 @@ function renderProjects() {
       if (project.id === "inbox") return;
       if (!confirm(`Eliminar el proyecto "${project.name}" y sus tareas?`)) return;
       state.projects = state.projects.filter((p) => p.id !== project.id);
+      const removedTasks = state.tasks.filter((t) => t.projectId === project.id);
       state.tasks = state.tasks.filter((t) => t.projectId !== project.id);
+      removedTasks.forEach((t) => {
+        try {
+          if (typeof deleteAttachmentsForTask === "function") deleteAttachmentsForTask(t.id).catch(() => {});
+        } catch (err) {}
+      });
       if (currentView.type === "project" && currentView.id === project.id) currentView = { type: "all" };
       saveState();
       render();
@@ -149,6 +163,19 @@ function renderTasks() {
       ? `<span class="badge assignee"><span class="user-avatar tiny" style="background:${assignee.color}">${escapeHtml(userInitials(assignee.name))}</span>${escapeHtml(assignee.name)}</span>`
       : "";
 
+    const subtasks = task.subtasks || [];
+    const comments = task.comments || [];
+    const attachments = task.attachments || [];
+    const subtaskBadge = subtasks.length > 0
+      ? `<span class="badge subtask-count">${subtasks.filter((s) => s.done).length}/${subtasks.length}</span>`
+      : "";
+    const commentBadge = comments.length > 0
+      ? `<span class="badge comment-count">💬 ${comments.length}</span>`
+      : "";
+    const attachmentBadge = attachments.length > 0
+      ? `<span class="badge attachment-count">📎 ${attachments.length}</span>`
+      : "";
+
     div.innerHTML = `
       <input type="checkbox" ${task.done ? "checked" : ""} />
       <div class="task-main">
@@ -158,6 +185,9 @@ function renderTasks() {
           ${deadlineBadge}
           <span class="badge priority-${task.priority}">${task.priority === "high" ? "Alta" : task.priority === "medium" ? "Media" : "Baja"}</span>
           ${assigneeBadge}
+          ${subtaskBadge}
+          ${commentBadge}
+          ${attachmentBadge}
         </div>
       </div>
       <button class="task-delete" title="Eliminar">&times;</button>
@@ -169,9 +199,17 @@ function renderTasks() {
       render();
     });
 
-    div.querySelector(".task-delete").addEventListener("click", () => {
+    div.querySelector(".task-main").addEventListener("click", () => {
+      openTaskDetail(task.id);
+    });
+
+    div.querySelector(".task-delete").addEventListener("click", (e) => {
+      e.stopPropagation();
       state.tasks = state.tasks.filter((t) => t.id !== task.id);
       saveState();
+      try {
+        if (typeof deleteAttachmentsForTask === "function") deleteAttachmentsForTask(task.id).catch(() => {});
+      } catch (err) {}
       render();
     });
 
@@ -191,6 +229,9 @@ function render() {
   renderViewTitle();
   renderTasks();
   if (typeof renderAssigneeSelect === "function") renderAssigneeSelect();
+  if (typeof currentDetailTaskId !== "undefined" && currentDetailTaskId && taskDetailDialog.open) {
+    renderTaskDetail();
+  }
 }
 
 document.querySelectorAll(".view-btn").forEach((btn) => {
@@ -223,6 +264,9 @@ document.getElementById("taskForm").addEventListener("submit", (e) => {
     assigneeId,
     done: false,
     createdAt: Date.now(),
+    subtasks: [],
+    comments: [],
+    attachments: [],
   });
 
   saveState();
@@ -269,6 +313,332 @@ document.getElementById("projectForm").addEventListener("submit", (e) => {
   state.projects.push({ id: uid(), name, color: selectedColor });
   saveState();
   render();
+});
+
+// ---------------------------------------------------------------------------
+// Task detail dialog (subtasks, comments, attachments)
+// ---------------------------------------------------------------------------
+
+const taskDetailDialog = document.getElementById("taskDetailDialog");
+let currentDetailTaskId = null;
+let detailAttachmentObjectUrls = [];
+
+function getTaskById(id) {
+  return state.tasks.find((t) => t.id === id);
+}
+
+function revokeDetailObjectUrls() {
+  detailAttachmentObjectUrls.forEach((url) => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch (e) {}
+  });
+  detailAttachmentObjectUrls = [];
+}
+
+function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes)) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function openTaskDetail(taskId) {
+  const task = getTaskById(taskId);
+  if (!task) return;
+  currentDetailTaskId = taskId;
+  lastRenderedAttachmentsSignature = null;
+  renderTaskDetail();
+  taskDetailDialog.showModal();
+}
+
+function renderDetailProjectSelect(task) {
+  const select = document.getElementById("detailProject");
+  select.innerHTML = state.projects
+    .map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
+    .join("");
+  select.value = task.projectId;
+}
+
+function renderDetailAssigneeSelect(task) {
+  const select = document.getElementById("detailAssignee");
+  if (!select) return;
+  const users = typeof usersState !== "undefined" ? usersState.users : [];
+  select.innerHTML =
+    `<option value="">Sin asignar</option>` +
+    users.map((u) => `<option value="${escapeHtml(u.id)}">${escapeHtml(u.name)}</option>`).join("");
+  select.value = task.assigneeId || "";
+}
+
+function renderSubtaskList(task) {
+  const list = document.getElementById("subtaskList");
+  const progress = document.getElementById("subtaskProgress");
+  const subtasks = task.subtasks || [];
+  const doneCount = subtasks.filter((s) => s.done).length;
+  progress.textContent = subtasks.length > 0 ? `${doneCount}/${subtasks.length} completadas` : "";
+
+  list.innerHTML = "";
+  subtasks.forEach((subtask) => {
+    const li = document.createElement("li");
+    li.className = "subtask-item" + (subtask.done ? " done" : "");
+    li.innerHTML = `
+      <input type="checkbox" ${subtask.done ? "checked" : ""} />
+      <span class="subtask-title">${escapeHtml(subtask.title)}</span>
+      <button type="button" class="delete-btn" title="Eliminar subtarea">&times;</button>
+    `;
+    li.querySelector('input[type="checkbox"]').addEventListener("change", (e) => {
+      subtask.done = e.target.checked;
+      saveState();
+      renderSubtaskList(task);
+      render();
+    });
+    li.querySelector(".delete-btn").addEventListener("click", () => {
+      task.subtasks = task.subtasks.filter((s) => s.id !== subtask.id);
+      saveState();
+      renderSubtaskList(task);
+      render();
+    });
+    list.appendChild(li);
+  });
+}
+
+function renderCommentList(task) {
+  const list = document.getElementById("commentList");
+  const comments = task.comments || [];
+  list.innerHTML = "";
+  comments.forEach((comment) => {
+    const author = typeof getUserById === "function" ? getUserById(comment.authorId) : undefined;
+    const authorName = author ? author.name : "Usuario eliminado";
+    const authorColor = author ? author.color : "var(--text-dim)";
+    const authorInitials = author && typeof userInitials === "function" ? userInitials(author.name) : "?";
+    const when = new Date(comment.createdAt).toLocaleString("es-ES");
+    const li = document.createElement("li");
+    li.className = "comment-item";
+    li.innerHTML = `
+      <span class="user-avatar small" style="background:${authorColor}">${escapeHtml(authorInitials)}</span>
+      <div class="comment-body">
+        <div class="comment-meta">
+          <span class="comment-author">${escapeHtml(authorName)}</span>
+          <span class="comment-date">${escapeHtml(when)}</span>
+        </div>
+        <div class="comment-text">${escapeHtml(comment.text)}</div>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function renderAttachmentList(task) {
+  const list = document.getElementById("attachmentList");
+  revokeDetailObjectUrls();
+  list.innerHTML = "";
+  const attachments = task.attachments || [];
+
+  attachments.forEach((att) => {
+    const li = document.createElement("li");
+    li.className = "attachment-item";
+    li.innerHTML = `
+      <div class="attachment-preview"></div>
+      <div class="attachment-info">
+        <span class="attachment-name">${escapeHtml(att.name)}</span>
+        <span class="attachment-size">${escapeHtml(formatFileSize(att.size))}</span>
+      </div>
+      <div class="attachment-actions">
+        <button type="button" class="ghost-btn attachment-download">Descargar</button>
+        <button type="button" class="delete-btn" title="Eliminar adjunto">&times;</button>
+      </div>
+    `;
+
+    const preview = li.querySelector(".attachment-preview");
+    if (att.type && att.type.startsWith("image/")) {
+      try {
+        getAttachment(att.id)
+          .then((record) => {
+            if (!record) return;
+            const url = URL.createObjectURL(record.blob);
+            detailAttachmentObjectUrls.push(url);
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = att.name;
+            preview.appendChild(img);
+          })
+          .catch(() => {});
+      } catch (e) {}
+    } else {
+      preview.textContent = "📄";
+    }
+
+    li.querySelector(".attachment-download").addEventListener("click", () => {
+      try {
+        getAttachment(att.id)
+          .then((record) => {
+            if (!record) return;
+            const url = URL.createObjectURL(record.blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = att.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          })
+          .catch(() => {});
+      } catch (e) {}
+    });
+
+    li.querySelector(".delete-btn").addEventListener("click", () => {
+      task.attachments = task.attachments.filter((a) => a.id !== att.id);
+      saveState();
+      try {
+        deleteAttachment(att.id);
+      } catch (e) {}
+      renderAttachmentList(task);
+      render();
+    });
+
+    list.appendChild(li);
+  });
+}
+
+let lastRenderedAttachmentsSignature = null;
+
+function renderTaskDetail() {
+  const task = getTaskById(currentDetailTaskId);
+  if (!task) return;
+
+  const titleInput = document.getElementById("detailTitle");
+  // Don't clobber in-progress typing: render() runs on every save elsewhere
+  // in the app (e.g. adding a subtask), which would otherwise reset this
+  // field's value out from under the user while they're mid-edit and
+  // haven't blurred/changed it yet.
+  if (document.activeElement !== titleInput) {
+    titleInput.value = task.title;
+  }
+  renderDetailProjectSelect(task);
+  document.getElementById("detailDeadline").value = task.deadline || "";
+  document.getElementById("detailPriority").value = task.priority;
+  renderDetailAssigneeSelect(task);
+
+  renderSubtaskList(task);
+  renderCommentList(task);
+
+  // Attachment thumbnails are fetched async from IndexedDB; skip re-fetching
+  // and re-rendering (which also revokes live object URLs, causing visible
+  // flicker) when the attachment list itself hasn't actually changed.
+  const signature = JSON.stringify((task.attachments || []).map((a) => a.id));
+  if (signature !== lastRenderedAttachmentsSignature) {
+    lastRenderedAttachmentsSignature = signature;
+    renderAttachmentList(task);
+  }
+}
+
+document.getElementById("detailTitle").addEventListener("change", (e) => {
+  const task = getTaskById(currentDetailTaskId);
+  if (!task) return;
+  const value = e.target.value.trim();
+  if (!value) {
+    e.target.value = task.title;
+    return;
+  }
+  task.title = value;
+  saveState();
+  render();
+});
+
+document.getElementById("detailProject").addEventListener("change", (e) => {
+  const task = getTaskById(currentDetailTaskId);
+  if (!task) return;
+  task.projectId = e.target.value;
+  saveState();
+  render();
+});
+
+document.getElementById("detailDeadline").addEventListener("change", (e) => {
+  const task = getTaskById(currentDetailTaskId);
+  if (!task) return;
+  task.deadline = e.target.value || null;
+  saveState();
+  render();
+});
+
+document.getElementById("detailPriority").addEventListener("change", (e) => {
+  const task = getTaskById(currentDetailTaskId);
+  if (!task) return;
+  task.priority = e.target.value;
+  saveState();
+  render();
+});
+
+document.getElementById("detailAssignee").addEventListener("change", (e) => {
+  const task = getTaskById(currentDetailTaskId);
+  if (!task) return;
+  task.assigneeId = e.target.value || null;
+  saveState();
+  render();
+});
+
+document.getElementById("addSubtaskBtn").addEventListener("click", () => {
+  const task = getTaskById(currentDetailTaskId);
+  if (!task) return;
+  const input = document.getElementById("subtaskInput");
+  const title = input.value.trim();
+  if (!title) return;
+  task.subtasks.push({ id: uid(), title, done: false });
+  saveState();
+  input.value = "";
+  renderSubtaskList(task);
+  render();
+});
+
+document.getElementById("addCommentBtn").addEventListener("click", () => {
+  const task = getTaskById(currentDetailTaskId);
+  if (!task) return;
+  const input = document.getElementById("commentInput");
+  const text = input.value.trim();
+  if (!text) return;
+  const authorId = typeof getCurrentUser === "function" ? (getCurrentUser()?.id ?? null) : null;
+  task.comments.push({ id: uid(), authorId, text, createdAt: Date.now() });
+  saveState();
+  input.value = "";
+  renderCommentList(task);
+  render();
+});
+
+document.getElementById("attachmentInput").addEventListener("change", (e) => {
+  const task = getTaskById(currentDetailTaskId);
+  if (!task) return;
+  const files = Array.from(e.target.files || []);
+  e.target.value = "";
+  if (files.length === 0) return;
+
+  files.forEach((file) => {
+    const id = uid();
+    try {
+      putAttachment(id, task.id, file.name, file.type, file)
+        .then(() => {
+          task.attachments.push({
+            id,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            createdAt: Date.now(),
+          });
+          saveState();
+          renderAttachmentList(task);
+          render();
+        })
+        .catch(() => {});
+    } catch (err) {}
+  });
+});
+
+document.getElementById("closeTaskDetailBtn").addEventListener("click", () => {
+  taskDetailDialog.close();
+});
+
+taskDetailDialog.addEventListener("close", () => {
+  revokeDetailObjectUrls();
+  currentDetailTaskId = null;
 });
 
 render();
